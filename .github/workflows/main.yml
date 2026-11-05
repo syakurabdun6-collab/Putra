@@ -24,32 +24,24 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Find project
+      - name: Extract Source
         run: |
-          if [ -f "build.gradle" ]; then
-            echo "PROJECT_DIR=." >> $GITHUB_ENV
-          elif [ -f "HellfireGas/build.gradle" ]; then
-            echo "PROJECT_DIR=HellfireGas" >> $GITHUB_ENV
-          else
-            echo "ERROR: build.gradle not found"
-            exit 1
-          fi
+          unzip -o src.zip -d .
+          ls HellfireGas/
 
-      - name: Build mod
-        run: gradle -p "$PROJECT_DIR" build --no-daemon
+      - name: Build Mod
+        run: gradle -p HellfireGas build --no-daemon
 
-      - name: Check JAR
+      - name: Check Mod JAR
         run: |
-          find "$PROJECT_DIR/build/libs" -maxdepth 1 -name '*.jar' -print
-          find "$PROJECT_DIR/build/libs" -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -exec sh -c '
-            echo "Checking: $1"
-            unzip -l "$1"
-          ' _ {} \;
+          JAR=$(find HellfireGas/build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' | head -n 1)
+          test -n "$JAR"
+          unzip -l "$JAR"
+          unzip -l "$JAR" | grep -q fabric.mod.json
 
-      - name: Upload mod
+      - name: Upload Mod
         uses: actions/upload-artifact@v4
         with:
           name: HellfireGas-JAR
-          path: |
-            ${{ env.PROJECT_DIR }}/build/libs/*[!.sources].jar
+          path: HellfireGas/build/libs/*.jar
           if-no-files-found: error
